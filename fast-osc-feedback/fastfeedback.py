@@ -358,7 +358,7 @@ class DataManager:
         elif method == Method.Efficiency:
             if not isinstance(arg, FakeEfficiency):
                 raise ValueError("A polars FakeEfficiency object is expected when using the Method.Efficiency method")
-            self.nunubar_discrimination = lambda: arg.generate(pl.col('nuPDG'), len(self.data)).sign()*pl.col('reco_pdg').abs()
+            self.nunubar_discrimination = lambda: arg.generate(pl.col('nuPDG'), len(self.data.filter(self.data_selection))).sign()*pl.col('reco_pdg').abs()
         else:
             raise ValueError()
         
