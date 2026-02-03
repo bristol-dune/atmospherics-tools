@@ -11,6 +11,7 @@ ExternalProject_Add(OscProb
     DOWNLOAD_DIR ${CMAKE_CURRENT_BINARY_DIR}
     GIT_REPOSITORY https://github.com/joaoabcoelho/OscProb
     SOURCE_DIR ${OSCPROB_SOURCE_DIR}
+    GIT_TAG v2.2.0
     BUILD_IN_SOURCE 1
     CONFIGURE_COMMAND ""
     BUILD_COMMAND ${MAKE}
