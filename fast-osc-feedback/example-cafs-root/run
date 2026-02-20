@@ -1,0 +1,8 @@
+#!/bin/bash
+
+# don't forget to run `conda activate dune-atmo-osc` first!
+
+export ROOT_INCLUDE_PATH="./duneanasel/build/_deps/duneanaobj-src/"
+export LD_LIBRARY_PATH="./duneanasel/build/:$LD_LIBRARY_PATH"
+
+root -l caf_reader.c

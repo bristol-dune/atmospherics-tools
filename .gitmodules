@@ -1,0 +1,3 @@
+[submodule "fast-osc-feedback/example-cafs-root/duneanasel"]
+	path = fast-osc-feedback/example-cafs-root/duneanasel
+	url = git@github.com:DUNE/duneanasel.git
