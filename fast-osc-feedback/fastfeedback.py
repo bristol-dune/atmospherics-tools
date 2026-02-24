@@ -355,6 +355,10 @@ class DataManager:
             if not isinstance(arg, pl.Expr):
                 raise ValueError("A polars expression is expected when using the Method.Perso method")
             self.nunubar_discrimination = lambda: arg
+        elif method == Method.BDT:
+            if not isinstance(arg, BDT):
+                raise ValueError("A polars BDT object is expected when using the Method.BDT method")
+            self.nunubar_discrimination = lambda: arg.score_column
         elif method == Method.Efficiency:
             if not isinstance(arg, FakeEfficiency):
                 raise ValueError("A polars FakeEfficiency object is expected when using the Method.Efficiency method")
@@ -400,6 +404,19 @@ class DataManager:
         )
 
         return prepared_data
+
+class BDT:
+
+    def __init__(self):
+
+        self.score_column = None
+
+
+    def add_score(self, score_column: pl.Expr):
+        
+        if not isinstance(score_column, pl.Expr):
+            raise ValueError("A polars expression is expected for the score_column")
+        self.score_column = score_column
     
 
 class FakeEfficiency:
