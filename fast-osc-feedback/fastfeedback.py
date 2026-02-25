@@ -1,3 +1,5 @@
+from ast import arg
+
 import uproot
 import numpy as np
 import ROOT
@@ -53,6 +55,7 @@ class Method(IntEnum):
     Reco = 1
     Perso = 2
     Efficiency = 3
+    BDT = 4
 
 channels = [ #[ifl, ofl] ; Aranged in a specific order to match the oscillograms,
     (Flavor.NuE, Flavor.NuE),
@@ -103,6 +106,33 @@ def fix_empty_arrays(data):
         ak.Array: An array with empty lists replaced by the specified value.
     """
     return ak.where(ak.num(data) == 0, ak.Array([[-999]] * len(data)), data)
+
+
+
+class BDT:
+    def __init__(self, filepath, score_column_name="bdt_score"):
+
+        if filepath.endswith('.csv'):
+            self.data = pl.read_csv(filepath)
+        else:
+            with uproot.open(filepath) as f:
+                tree_name = f.keys()[0] 
+                self.data = pl.from_pandas(f[tree_name].arrays(library="pd"))
+        
+        self.score_column_name = score_column_name
+        self.score_column = pl.col(score_column_name)
+
+    def get_nunubar_logic(self):
+        """
+        Returns logic to convert BDT score (0.0 to 1.0) into a sign.
+        Assuming score > 0.5 is Anti-neutrino (-1) and <= 0.5 is Neutrino (+1).
+        """
+        return (
+            pl.when(self.score_column > 0.5)
+            .then(-1)
+            .otherwise(1)
+        )
+    
 
 
 class DataManager:
@@ -220,8 +250,9 @@ class DataManager:
         weights['nue_w'] *= weights["xsec"]
         weights['numu_w'] *= weights["xsec"]
 
-        self.data = pl.from_pandas(pd.DataFrame(weights))
-        print("Finished loading data")
+        #added event index for joining with BDT scores
+        self.data = pl.from_pandas(pd.DataFrame(weights)).with_row_index("event_index")
+        print("Finished loading data with unique indices")
 
     def set_flavor_discrimination(self, method:Method, arg=None):
         """
@@ -332,11 +363,25 @@ class DataManager:
             self.direc_reco = lambda: pl.lit(arg.generate(self.data[arg.bin_var], self.data['direc_true']))
         else:
             raise ValueError()
+        
+    def attach_bdt_scores(self, bdt_df: pl.DataFrame, score_col: str = "bdt_score"):
+        """
+        Joins external BDT scores using the 'event_index'.
+        """
+        if "event_index" not in bdt_df.columns:
+            raise ValueError("The BDT DataFrame must include 'event_index' for joining.")
+        
+        # Only want the index and the score to avoid column name collisions
+        bdt_subset = bdt_df.select(["event_index", score_col])
+        
+        # Left join ensures keep the CAF structure, scores are null where missing
+        self.data = self.data.join(bdt_subset, on="event_index", how="left")
+        self.bdt_score_col = score_col
 
-    def set_nunubar_discrimination(self, method:Method, arg=None):
+    def set_nunubar_discrimination(self, method:Method, arg=None, score_col: str = None):
+
         """
         Sets the nunubar discrimination method based on the given method and argument.
-
         Parameters:
             method (Method): The method to use for nunubar discrimination.
             arg (optional): An argument specific to the chosen method.
@@ -356,9 +401,10 @@ class DataManager:
                 raise ValueError("A polars expression is expected when using the Method.Perso method")
             self.nunubar_discrimination = lambda: arg
         elif method == Method.BDT:
-            if not isinstance(arg, BDT):
-                raise ValueError("A polars BDT object is expected when using the Method.BDT method")
-            self.nunubar_discrimination = lambda: arg.score_column
+            col = score_col if score_col else self.bdt_score_col
+            self.nunubar_discrimination = lambda: (
+                pl.col('reco_pdg').abs() * pl.when(pl.col(col) > 0.5).then(-1).otherwise(1)
+            )
         elif method == Method.Efficiency:
             if not isinstance(arg, FakeEfficiency):
                 raise ValueError("A polars FakeEfficiency object is expected when using the Method.Efficiency method")
@@ -403,21 +449,9 @@ class DataManager:
             direc_reco = self.direc_reco()
         )
 
-        return prepared_data
-
-class BDT:
-
-    def __init__(self):
-
-        self.score_column = None
+        return prepared_data.drop_nulls(subset=["reco_pdg"])
 
 
-    def add_score(self, score_column: pl.Expr):
-        
-        if not isinstance(score_column, pl.Expr):
-            raise ValueError("A polars expression is expected for the score_column")
-        self.score_column = score_column
-    
 
 class FakeEfficiency:
     """
