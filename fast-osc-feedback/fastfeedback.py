@@ -441,6 +441,8 @@ class DataManager:
             raise ValueError(
                 "The BDT DataFrame must include 'event_index' for joining."
             )
+        if score_col in self.data.columns:
+            self.data.drop_in_place(score_col)
 
         # Only want the index and the score to avoid column name collisions
         bdt_subset = bdt_df.select(["event_index", score_col])
