@@ -95,7 +95,7 @@ def get_nufit(mh=MH.Normal):
     """
     pars = ROOT.OscPars()
     pars.dm21 = 7.537e-5 # 7.5e-5
-    pars.dm31 = 2.511e-3 if mh == MH.Normal else -2.483e-3 # 2.457e-3 if mh == MH.Normal else -2.449e-3 + pars.dm21
+    pars.dm31 = 2.511e-3 if mh == MH.Normal else -2.483e-3 + pars.dm21 # 2.457e-3 if mh == MH.Normal else -2.449e-3 + pars.dm21
     pars.th12 = np.deg2rad(33.76) # np.arcsin(np.sqrt(0.304))
     pars.th13 = np.deg2rad(8.62 if mh == MH.Normal else 8.65) # np.arcsin(np.sqrt(0.0218 if mh == MH.Normal else 0.0219))
     pars.th23 = np.deg2rad(43.29 if mh == MH.Normal else 47.90) # np.arcsin(np.sqrt(0.452 if mh == MH.Normal else 0.579))
