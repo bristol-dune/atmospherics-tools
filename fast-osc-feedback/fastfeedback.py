@@ -76,9 +76,28 @@ channels = [ #[ifl, ofl] ; Aranged in a specific order to match the oscillograms
     (Flavor.NuMuBar, Flavor.NC)
 ]
 
+# def get_nufit(mh = MH.Normal):
+#     """
+#     Returns the OscPars object with the specified parameters for neutrino oscillation.
+
+#     Parameters:
+#     - mh (MH): The mass hierarchy of the neutrinos. Default is MH.Normal.
+
+#     Returns:
+#     - pars (OscPars): The OscPars object with the specified parameters.
+#     """
+#     pars = ROOT.OscPars()
+#     pars.dm21 = 7.5e-5
+#     pars.dm31 = 2.457e-3 if mh == MH.Normal else -2.449e-3 + pars.dm21
+#     pars.th12 = np.arcsin(np.sqrt(0.304))
+#     pars.th13 = np.arcsin(np.sqrt(0.0218 if mh == MH.Normal else 0.0219))
+#     pars.th23 = np.arcsin(np.sqrt(0.452 if mh == MH.Normal else 0.579))
+#     pars.dcp  = (306 if mh == MH.Normal else 254)*np.pi/180
+#     return pars
+
 def get_nufit(mh = MH.Normal):
     """
-    Returns the OscPars object with the specified parameters for neutrino oscillation.
+    Returns the OscPars object with the specified parameters for neutrino oscillation. for nuFIT 6.1 w/ SK data!!
 
     Parameters:
     - mh (MH): The mass hierarchy of the neutrinos. Default is MH.Normal.
@@ -87,12 +106,12 @@ def get_nufit(mh = MH.Normal):
     - pars (OscPars): The OscPars object with the specified parameters.
     """
     pars = ROOT.OscPars()
-    pars.dm21 = 7.5e-5
-    pars.dm31 = 2.457e-3 if mh == MH.Normal else -2.449e-3 + pars.dm21
-    pars.th12 = np.arcsin(np.sqrt(0.304))
-    pars.th13 = np.arcsin(np.sqrt(0.0218 if mh == MH.Normal else 0.0219))
-    pars.th23 = np.arcsin(np.sqrt(0.452 if mh == MH.Normal else 0.579))
-    pars.dcp  = (306 if mh == MH.Normal else 254)*np.pi/180
+    pars.dm21 = 7.49e-5
+    pars.dm31 = 2.513e-3 if mh == MH.Normal else -2.483e-3 + pars.dm21
+    pars.th12 = 33.68*np.pi/180
+    pars.th13 = (8.56 if mh == MH.Normal else 8.65)*np.pi/180
+    pars.th23 = (43.3 if mh == MH.Normal else 47.90)*np.pi/180
+    pars.dcp  = (212 if mh == MH.Normal else 274)*np.pi/180
     return pars
 
 def fix_empty_arrays(data):
@@ -378,7 +397,7 @@ class DataManager:
         self.data = self.data.join(bdt_subset, on="event_index", how="left")
         self.bdt_score_col = score_col
 
-    def set_nunubar_discrimination(self, method:Method, arg=None, score_col: str = None):
+    def set_nunubar_discrimination(self, method:Method, arg=None, score_col: str = None, threshold: float = 0.5):
 
         """
         Sets the nunubar discrimination method based on the given method and argument.
@@ -403,7 +422,7 @@ class DataManager:
         elif method == Method.BDT:
             col = score_col if score_col else self.bdt_score_col
             self.nunubar_discrimination = lambda: (
-                pl.col('reco_pdg').abs() * pl.when(pl.col(col) > 0.5).then(-1).otherwise(1)
+                pl.col('reco_pdg').abs() * pl.when(pl.col(col) > threshold).then(-1).otherwise(1)
             )
         elif method == Method.Efficiency:
             if not isinstance(arg, FakeEfficiency):
@@ -615,6 +634,7 @@ class EventDistrib:
                  fieldNumuFlux="numu_w", fieldTrueE="Ev", fieldTrueDir="direc_true",
                  fieldRecoE="recoE", fieldRecoDir="direc_reco", fieldRecoFlv="reco_pdg",
                  exposure = 400, prem=prem_default):
+        
         
         self.events = events
         self.fieldIsCC = fieldIsCC
